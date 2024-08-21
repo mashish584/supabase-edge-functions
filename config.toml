@@ -204,3 +204,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.verify-email]
 verify_jwt = false
+
+[functions.seed-transactions]
+verify_jwt = false
