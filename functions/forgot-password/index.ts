@@ -10,7 +10,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const ZOHO_TOKEN = Deno.env.get('ZOHO_TOKEN');
 
-const ENABLE_MAIL = false;
+const ENABLE_MAIL = true;
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 

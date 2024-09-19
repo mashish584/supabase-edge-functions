@@ -126,12 +126,14 @@ const purchaseItems = [
 ];
 
 const transaction_types = ["income", "expense", "transfer"];
+const receipt_images = ["https://ik.imagekit.io/imashish/moneypal/receipts/receipt-4_tkOje6oBGh.jpeg","https://ik.imagekit.io/imashish/moneypal/receipts/receipt-1_2yQKFnowT.jpg","https://ik.imagekit.io/imashish/moneypal/receipts/receipt-5_MJfiJMGzD.jpeg","https://ik.imagekit.io/imashish/moneypal/receipts/receipt-3_9M82TNph0.jpg","https://ik.imagekit.io/imashish/moneypal/receipts/receipt-2_bfaf1ve4g.png"];
+const N = 100;
 
 function getCreatedAt() {
 	const today = new Date();
-	const last12Months = new Date();
-	last12Months.setMonth(today.getMonth() - 12);
-	const randomTimestamp = Math.random() * (today.getTime() - last12Months.getTime()) + last12Months.getTime();
+	const startDate = new Date();
+	startDate.setMonth(today.getMonth() - 1);
+	const randomTimestamp = Math.random() * (today.getTime() - startDate.getTime()) + startDate.getTime();
 	return new Date(randomTimestamp);
 }
 
@@ -147,13 +149,13 @@ function getRandomNumber(min = 10, max = 10000, isFloating = false) {
 	return isFloating ? (Math.random() * (max - min + 1) + min).toFixed(2) : Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-const user_id = "8cfbb1e6-e6e4-48f1-9341-f01443782773";
+const user_id = "2f0b9670-f389-4757-a356-e4f8e92e9a2d";
 
 async function seedingTransactions(){
 	console.log(`Fetching categories...`);
 	const categoryIds = await getAvailableCategories();
 	console.log(`Seeding transactions...`);
-	for (let i = 0; i < 1000; i++) {
+	for (let i = 0; i < N; i++) {
 		const created_at = getCreatedAt().toISOString();
 		const name = purchaseItems[Math.floor(Math.random() * purchaseItems.length)];
 		const description =
@@ -162,12 +164,13 @@ async function seedingTransactions(){
 		const amount = getRandomNumber(2, 2500, true);
 		const category = categoryIds[Math.floor(Math.random() * categoryIds.length)];
 		const type = transaction_types[Math.floor(Math.random() * transaction_types.length)];
+		const attachment = { url: receipt_images[Math.floor(Math.random() * receipt_images.length)] }
 
 		const response = await supabase
 			.from("transactions")
-			.insert({ created_at, name, description, short_description, amount, category, type, user_id });
+			.insert({ created_at, name, description, short_description, amount, category, type, user_id, attachment });
 		if (!response.error) {
-			const percentage = (i / 1000) * 100;
+			const percentage = (i / N) * 100;
 			if (percentage > 0 && percentage % 10 === 0) {
 				console.log(`${percentage}% data seed.`);
 			}
@@ -181,7 +184,7 @@ async function seedingTransactions(){
 Deno.serve(async (req) => {
   try{
 		const { type } = req.json();
-		if(type  === "transactions"){
+		if(true || type  === "transactions"){
 			await seedingTransactions();
 		}
 
