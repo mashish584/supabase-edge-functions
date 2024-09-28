@@ -15,6 +15,13 @@ const ENABLE_MAIL = false;
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 
+function sendResponse(data,statusCode){
+  return new Response(
+    JSON.stringify(data),
+    { headers: { "Content-Type": "application/json" }, status: statusCode },
+  )
+}
+
 function generateRandomCode(length: number): number {
   if (length <= 0) {
     throw new Error("Length must be a positive integer.");
@@ -48,15 +55,13 @@ Deno.serve(async (req) => {
     const { email, id, raw_user_meta_data } = await req.json()
     const token = await updateTokenInProfilesTable(id);
     if(token === null){
-      return new Response(
-        JSON.stringify({message: "Error while generating confirmation token."}),
-        { headers: { "Content-Type": "application/json" } },
-      )
+      return sendResponse({message: "Error while generating confirmation token."}, 500);
     }
 
+    let response:any = {};
     if(ENABLE_MAIL && email && token){
      console.log(`Sending welcome email to ${email}`);
-     var response = await fetch("https://api.zeptomail.in/v1.1/email", {
+      const mailResponse = await fetch("https://api.zeptomail.in/v1.1/email", {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -77,21 +82,15 @@ Deno.serve(async (req) => {
           htmlbody: `<div>Please use the following code to verify your account: <b>${token}</b></div>`
         })
       })
-      response = await response.json();
+      response = await mailResponse.json();
     }else{
       response = {};
     }
 
-    return new Response(
-      JSON.stringify({message: response.error ? "Error" : "Success", response}),
-      { headers: { "Content-Type": "application/json" } },
-    )
+    return sendResponse({message: response.error ? "Error" : "Success", response}, 200);
   }catch(error){
     console.log("Error \n");
     console.log(JSON.stringify(error,null,2))
-    return new Response(
-      JSON.stringify({message: "Error", error}),
-      { headers: { "Content-Type": "application/json" } },
-    )
+    return sendResponse({message: "Error", error}, 500);
   }
 })

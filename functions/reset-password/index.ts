@@ -10,6 +10,12 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 
+function sendResponse(data,statusCode){
+  return new Response(
+    JSON.stringify(data),
+    { headers: { "Content-Type": "application/json" }, status: statusCode },
+  )
+}
 
 async function updateUserPassword(password,accessToken) {
   const data = { password };
@@ -40,14 +46,12 @@ async function updateUserPassword(password,accessToken) {
 
 Deno.serve(async (req) => {
   try{
-    const { password } = await req.json()
+    const { password } = await req.json();
 
     const authHeader = req.headers.get('Authorization');
-    console.log(JSON.stringify({authHeader},null,2));
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Missing or invalid Authorization header' }), {
-        status: 401,
-      });
+      return sendResponse({ error: 'Authorization failed.' },401);
     }
   
     const jwtToken = authHeader.split(" ")[1];
@@ -55,23 +59,19 @@ Deno.serve(async (req) => {
     const user = decodedAuthResponse.data?.user;
 
     if(!user){
-      return new Response(JSON.stringify({ message: 'Authroization failed.' }), {
-        status: 401,
-      });
+      return sendResponse({ error: 'Authorization failed.' },401);
     }
 
     if(!password){
-      return new Response(JSON.stringify({ message: 'Please check the payload body.' }), {
-        status: 422,
-      });
+      return sendResponse({ message: 'Please check the payload body.' },422);
     }
 
     const { error:updateUserError } = await updateUserPassword(password,jwtToken);
   
     if(updateUserError){
-      return new Response(JSON.stringify({ message: updateUserError?.message || 'Server error.', error_code: updateUserError?.error_code  }), {
-        status: updateUserError?.code || 500,
-      });
+      const data = { message: updateUserError?.message || 'Server error.', error_code: updateUserError?.error_code  };
+      const statusCode = updateUserError?.code || 500;
+      return sendResponse(data,statusCode);
     }
 
     const { error:updateProfileError } = await supabase
@@ -80,20 +80,13 @@ Deno.serve(async (req) => {
           .eq('id', user.id);
  
     if(updateProfileError){
-      return new Response(JSON.stringify({ message: 'Server error.' }), {
-        status: 500,
-      });
+      console.log(`Error while updating force password flag.`);
     }
     
-    return new Response(
-      JSON.stringify({message : 'Success'}),
-      { headers: { "Content-Type": "application/json" } },
-    )
+    return sendResponse({message:"success"},200);
   }catch(error){
     console.log(error)
-    return new Response(JSON.stringify({ message: 'Server error.' }), {
-      status: 500,
-    });
+    return sendResponse({ message: 'Server error.' },500);
   }
 })
 

@@ -14,6 +14,13 @@ const ENABLE_MAIL = true;
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 
+function sendResponse(data,statusCode){
+  return new Response(
+    JSON.stringify(data),
+    { headers: { "Content-Type": "application/json" }, status: statusCode },
+  )
+}
+
 function generateRandomPassword() {
   const length = Math.floor(Math.random() * 7) + 6; // Random length between 6 and 12
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -32,9 +39,7 @@ Deno.serve(async (req) => {
   const {data:profileData, error:profileDataError} = await supabase.from("profiles").select("*").eq("email", email);
 
   if(profileDataError){
-    return new Response(JSON.stringify({ message: 'Server error.' }), {
-      status: 500,
-    });
+    return sendResponse({ message: 'Server error.' },500);
   }
 
   const profileInfo = profileData?.[0];
@@ -44,11 +49,18 @@ Deno.serve(async (req) => {
     const { error:updateUserError } = await supabase.auth.admin.updateUserById(profileInfo.id,{
       password: password
     })
-  
+    
+    const { error:updateProfileError } = await supabase
+        .from('profiles')
+        .update({ force_password_reset: false })
+        .eq('id', profileInfo.id);
+
+    if(updateProfileError){
+      console.log('Error while updating force password flag.')
+    }
+      
     if(updateUserError){
-      return new Response(JSON.stringify({ message: 'Server error.' }), {
-        status: 500,
-      });
+      return sendResponse({ message: 'Server error.' },500);
     }
 
 
@@ -76,21 +88,15 @@ Deno.serve(async (req) => {
          })
       })
       response = await response.json();
-      console.log({response});
      }else{
        response = {};
      }
   }
   
-  return new Response(
-    JSON.stringify({message:"success"}),
-    { headers: { "Content-Type": "application/json" } },
-  )
+  return sendResponse({message:"success"},200);
  }catch(error){
   console.log(error);
-  return new Response(JSON.stringify({ message: 'Server error.' }), {
-    status: 500,
-  });
+  return sendResponse({ message: 'Server error.' },500);
  }
 })
 
